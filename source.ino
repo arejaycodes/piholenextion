@@ -34,9 +34,9 @@ void loop() {
         if(httpCode > 0) {
             if(httpCode == HTTP_CODE_OK) {
                 String payload = http.getString();       // save as string 'payload'
-                const size_t bufferSize = JSON_OBJECT_SIZE(9) + 230;
+                const size_t bufferSize = JSON_OBJECT_SIZE(10) + 250;
                 DynamicJsonBuffer jsonBuffer(bufferSize);
-                JsonObject& root = jsonBuffer.parseObject(payload); // parse string
+                JsonObject& root = jsonBuffer.parseObject(payload);
                 JsonObject& response = root["response"];
                 JsonObject& response_data0 = response["data"][0];
                 const char* domains_being_blocked = root["domains_being_blocked"]; 
@@ -48,23 +48,47 @@ void loop() {
                 const char* queries_cached = root["queries_cached"]; 
                 const char* clients_ever_seen = root["clients_ever_seen"]; 
                 const char* unique_clients = root["unique_clients"]; 
+                const char* status_pihole = root["status"];
                             
-                String command1 = "ads.txt=\" " + String(ads_blocked_today) + "\""; // ads.txt="1234" string
-                Serial.print(command1); // send string over serial
-                endNextionCommand();    // send 0xff 3x
+                String command1 = "ads.txt=\" " + String(ads_blocked_today) + "\"";
+                Serial.print(command1);
+                endNextionCommand();
                 delay(10);
-                String command2 = "domains.txt=\" " + String(domains_being_blocked) + "\""; // domains.txt="1234" string 
-                Serial.print(command2); // send string over serial
-                endNextionCommand();    // send 0xff 3x
+                String command2 = "domains.txt=\" " + String(domains_being_blocked) + "\"";
+                Serial.print(command2);
+                endNextionCommand();
                 delay(10);
-                String command3 = "today.txt=\" " + String(ads_percentage_today) + "%\""; // today.txt="1234" string
-                Serial.print(command3); // send string over serial
-                endNextionCommand();  // send 0xff 3x
+                String command3 = "today.txt=\" " + String(ads_percentage_today) + "%\"";
+                Serial.print(command3);
+                endNextionCommand();
                 delay(10);
-                String command4 = "blocked.txt=\" " + String(dns_queries_today) + "\""; // blocked.txt="1234" string
-                Serial.print(command4); // send string over serial
-                endNextionCommand();    // send 0xff 3x
-                http.end();             // close http connection
+                String command4 = "blocked.txt=\" " + String(dns_queries_today) + "\"";
+                Serial.print(command4);
+                endNextionCommand();
+                delay(10);
+                
+                // check if Pi-Hole is enabled or disabled
+                if (String(status_pihole) == "enabled") {  // status from the JSON requests equals 'enabled'
+                   String command5 = "status.txt=\"ON\"";  // create string to send to Nextion over serial
+                   Serial.print(command5);                 // send serial command
+                   endNextionCommand();                    // send '0xff' 3x to let Nextion know its end of this serial command
+                   delay(10);
+                   Serial.print("status.pic=10");           // change backgeound of status.pic on the Nextion to image 10 stored on the displays memory
+                   endNextionCommand();                     // send '0xff' 3x to let Nextion know its end of this serial command
+                   delay(10);
+                       
+                }
+                else {                                      // JSOnSrequest did not equal 'enabled'
+                  String command6 = "status.txt=\"OFF\"";   // create string to send to Nextion over serial 
+                  Serial.print(command6);                   // send serial command
+                  endNextionCommand();                      // send '0xff' 3x to let Nextion know its end of this serial command
+                  delay(10);  
+                  Serial.print("status.pic=9");             // change backgeound of status.pic on the Nextion to image 9 stored on the displays memory
+                  endNextionCommand();                      // send '0xff' 3x to let Nextion know its end of this serial command
+                  delay(10);
+                }
+                
+                http.end();                                 // end http socket
             }
         } else {
             // error - no wifi connection
